@@ -511,13 +511,13 @@ class WordpressReadOnly extends WordpressReadOnlyGeneric {
 		$data['basedir'] = $this->upload_basedir;
 		switch (wpro_get_option('wpro-service')) {
 		case 'ftp':
-			$data['baseurl'] = 'http://' . trim(str_replace('//', '/', trim(wpro_get_option('wpro-ftp-webroot'), '/') . '/' . trim(wpro_get_option('wpro-folder'))), '/');
+			$data['baseurl'] = '//' . trim(str_replace('//', '/', trim(wpro_get_option('wpro-ftp-webroot'), '/') . '/' . trim(wpro_get_option('wpro-folder'))), '/');
 			break;
 		default:
 			if (wpro_get_option('wpro-aws-virthost')) {
-				$data['baseurl'] = 'http://' . trim(str_replace('//', '/', wpro_get_option('wpro-aws-bucket') . '/' . trim(wpro_get_option('wpro-folder'))), '/');
+				$data['baseurl'] = '//' . trim(str_replace('//', '/', wpro_get_option('wpro-aws-bucket') . '/' . trim(wpro_get_option('wpro-folder'))), '/');
 			} else {
-				$data['baseurl'] = 'http://' . trim(str_replace('//', '/', wpro_get_option('wpro-aws-bucket') . '.s3.amazonaws.com/' . trim(wpro_get_option('wpro-folder'))), '/');
+				$data['baseurl'] = '//' . trim(str_replace('//', '/', wpro_get_option('wpro-aws-bucket') . '.s3.amazonaws.com/' . trim(wpro_get_option('wpro-folder'))), '/');
 			}
 		}
 		$data['path'] = $this->upload_basedir . $data['subdir'];
@@ -599,7 +599,7 @@ class WordpressReadOnly extends WordpressReadOnlyGeneric {
 
 		$this->debug('WordpressReadOnly::load_image_to_edit_path("' . $filepath . '");');
 
-		if (substr($filepath, 0, 7) == 'http://') {
+		if (substr($filepath, 0, 2) == '//') {
 
 			$ending = '';
 			if (preg_match('/\.([^\.\/]+)$/', $filepath, $regs)) $ending = '.' . $regs[1];
