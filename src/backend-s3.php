@@ -116,12 +116,19 @@ class WPRO_Backend_S3 {
 		return $log->logreturn(true);
 	}
 
+	function url_encode_filename($url) {
+		$vars = explode("/", $url);
+		$vars[(count($vars) - 1)] = urlencode($vars[(count($vars) - 1)]);
+		return implode("/", $vars);
+	}
+
 	function store_file($data) {
 		$log = wpro()->debug->logblock('WPRO_Backend_S3::store_file($data)');
 		$log->log('$data = ' . var_export($data, true));
 
 		$file = $data['file'];
 		$url = wpro()->url->relativePath($data['url']);
+		$url = $this->url_encode_filename($url);
 
 		if (strlen($folder = trim(wpro()->options->get_option('wpro-folder'), '/'))) {
 			$url = $folder . "/" . $url;
