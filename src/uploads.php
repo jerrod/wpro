@@ -177,10 +177,30 @@ class WPRO_Uploads {
 	function update_attachment_metadata($data) {
 		$log = wpro()->debug->logblock('WPRO_Uploads::update_attachment_metadata($data = ' . var_export($data, true) . ')');
 
+		if (!is_array($data)) return $log->logreturn($data);
 
-		if (!is_array($data) || !isset($data['sizes']) || !is_array($data['sizes'])) return $log->logreturn($data);
 		$upload_dir = wp_upload_dir();
 		$filepath = $upload_dir['basedir'] . '/' . preg_replace('/^(.+\/)?.+$/', '\\1', $data['file']);
+
+		// Workaround to process the main file also
+		if (isset($data['file']) && wpro()->backends->is_backend_activated()) {
+			$file = $filepath . basename($data['file']);
+			$url = $upload_dir['baseurl'] . substr($file, strlen($upload_dir['basedir']));
+			$filetype = wp_check_filetype($file);
+			if (is_array($filetype) && isset($filetype['type'])) {
+				$mime = $filetype['type'];
+			} else {
+				$mime = 'application/octet-stream';
+			}
+			apply_filters('wpro_backend_store_file', array(
+				'file' => $file,
+				'url' => $url,
+				'type' => $mime
+			));
+
+		}
+
+		if (!isset($data['sizes']) || !is_array($data['sizes'])) return $log->logreturn($data);
 		foreach ($data['sizes'] as $size => $sizedata) {
 			$file = $filepath . $sizedata['file'];
 			$url = $upload_dir['baseurl'] . substr($file, strlen($upload_dir['basedir']));
