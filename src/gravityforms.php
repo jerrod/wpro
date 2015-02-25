@@ -15,14 +15,26 @@ class WPRO_Gravityforms {
 		foreach($form['fields'] as $field) {
 			if ($field['type'] == 'fileupload') {
 				$id = (int) $field['id'];
-				$file_to_upload = $entry[$id];
-				if($file_to_upload) {
-					$url = $entry[$id];
-					$file_to_upload = str_replace($upload_dir['baseurl'], $upload_dir['basedir'], $file_to_upload);
+				if ($entry[$id]) {
+					$file_to_upload = str_replace($upload_dir['baseurl'], $upload_dir['basedir'], $entry[$id]);
 					$mime = wp_check_filetype($file_to_upload);
-
-					$response = $this->backend->upload($file_to_upload, $url, $mime['type']);
-					if (!$response) return $log->logreturn(false);
+					$data = apply_filters('wpro_backend_store_file', array(
+						'url' => $entry[$id],
+						'file' => $file_to_upload,
+						'type' => $mime['type'],
+					));
+					if (is_array($data)) {
+						$entry[$id] = wpro()->url->attachmentUrl($entry[$id]);
+						GFAPI::update_entry($entry);
+					} else {
+						$log->log('Some error somewhere: $data after wpro_backend_store_file filter is not an array.');
+					}
+				}
+			} else if ($field['type'] == 'post_image') {
+				$id = (int) $field['id'];
+				if ($entry[$id]) {
+					$entry[$id] = wpro()->url->attachmentUrl($entry[$id]);
+					GFAPI::update_entry($entry);
 				}
 			}
 		}
