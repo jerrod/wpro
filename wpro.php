@@ -59,6 +59,9 @@ class WPRO_Core {
 		$this->tmpdir = new WPRO_TmpDir();
 		$this->uploads = new WPRO_Uploads();
 		$this->url = new WPRO_Url();
+		if (class_exists('GFCommon')) {
+			$this->gravityforms = new WPRO_Gravityforms();
+		}
 
 		add_action('after_setup_theme', array($this, 'init_wp_hook'));
 	}
