@@ -275,10 +275,8 @@ class WordpressReadOnly extends WordpressReadOnlyGeneric {
 		add_filter('wp_handle_upload', array($this, 'handle_upload')); // The very filter that takes care of uploads.
 		add_filter('upload_dir', array($this, 'upload_dir')); // Sets the paths and urls for uploads.
 		add_filter('wp_generate_attachment_metadata', array($this, 'generate_attachment_metadata')); // We use this filter to store resized versions of the images.
-		add_filter('wp_update_attachment_metadata', array($this, 'update_attachment_metadata')); // We use this filter to store resized versions of the images.
 		add_filter('load_image_to_edit_path', array($this, 'load_image_to_edit_path')); // This filter downloads the image to our local temporary directory, prior to editing the image.
-		add_filter('wp_save_image_file', array($this, 'save_image_file')); // Store image file.
-		add_filter('wp_save_image_editor_file', array($this, 'save_image_file'), 10, 5);
+		add_filter('wp_save_image_file', array($this, 'save_image_file'), 10, 5); // Store image file.
 		add_filter('wp_upload_bits', array($this, 'upload_bits')); // On XMLRPC uploads, files arrives as strings, which we are handling in this filter.
 		add_filter('wp_handle_upload_prefilter', array($this, 'handle_upload_prefilter')); // This is where we check for filename dupes (and change them to avoid overwrites).
 		add_filter('shutdown', array($this, 'shutdown'));
@@ -522,7 +520,7 @@ class WordpressReadOnly extends WordpressReadOnlyGeneric {
 		}
 		$data['path'] = $this->upload_basedir . $data['subdir'];
 		$data['url'] = $data['baseurl'] . $data['subdir'];
-		$this->removeTemporaryLocalData($data['path']);
+
 //		$this->debug('-> RETURNS = ');
 //		$this->debug(print_r($data, true));
 
@@ -530,7 +528,6 @@ class WordpressReadOnly extends WordpressReadOnlyGeneric {
 	}
 
 	function generate_attachment_metadata($data) {
-		$this->debug('WordpressReadOnly::generate_attachment_metadata();');
 		if (!is_array($data) || !isset($data['sizes']) || !is_array($data['sizes'])) return $data;
 
 		$upload_dir = wp_upload_dir();
@@ -540,14 +537,11 @@ class WordpressReadOnly extends WordpressReadOnlyGeneric {
 			$url = $upload_dir['baseurl'] . substr($file, strlen($upload_dir['basedir']));
 
 			$mime = 'application/octet-stream';
-			switch(strtolower(substr($file, -4))) {
+			switch(substr($file, -4)) {
 				case '.gif':
 					$mime = 'image/gif';
 					break;
 				case '.jpg':
-					$mime = 'image/jpeg';
-					break;
-				case '.jpeg':
 					$mime = 'image/jpeg';
 					break;
 				case '.png':
@@ -555,40 +549,6 @@ class WordpressReadOnly extends WordpressReadOnlyGeneric {
 					break;
 			}
 
-			$this->backend->upload($file, $url, $mime);
-		}
-
-		return $data;
-	}
-
-	function update_attachment_metadata($data) {
-
-		$this->debug('WordpressReadOnly::update_attachment_metadata();');
-
-		if (!is_array($data) || !isset($data['sizes']) || !is_array($data['sizes'])) return $data;
-
-		$upload_dir = wp_upload_dir();
-		$filepath = $upload_dir['basedir'] . '/' . preg_replace('/^(.+\/)?.+$/', '\\1', $data['file']);
-
-		foreach ($data['sizes'] as $size => $sizedata) {
-			$file = $filepath . $sizedata['file'];
-			$url = $upload_dir['baseurl'] . substr($file, strlen($upload_dir['basedir']));
-			$mime = 'application/octet-stream';
-
-			switch(strtolower(substr($file, -4))) {
-				case '.gif':
-					$mime = 'image/gif';
-					break;
-				case '.jpg':
-					$mime = 'image/jpeg';
-					break;
-				case '.jpeg':
-					$mime = 'image/jpeg';
-					break;
-				case '.png':
-					$mime = 'image/png';
-					break;
-			}
 			$this->backend->upload($file, $url, $mime);
 		}
 
@@ -631,23 +591,39 @@ class WordpressReadOnly extends WordpressReadOnlyGeneric {
 
 	function save_image_file($dummy, $filename, $image, $mime_type, $post_id) {
 
-		$this->debug('WordpressReadOnly::save_image_file("' . $filename . '", "' . $mime_type . '", "' . $post_id . '");');
+		$this->debug('WordpressReadOnly::save_image_file("' . $dummy . '", "' . $filename . '", "' . $image . '", "' . $mime_type . '", "' . $post_id . '");');
 
 		if (substr($filename, 0, strlen($this->tempdir)) != $this->tempdir) return false;
-		$tmpfile = substr($filename, strlen($this->tempdir));
-		if (!preg_match('/^wpro[0-9]+(\/.+)$/', $tmpfile, $regs)) return false;
+		$filename = substr($filename, strlen($this->tempdir));
+		if (!preg_match('/^wpro[0-9]+(\/.+)$/', $filename, $regs)) return false;
 
-		$tmpfile = $regs[1];
-		$this->debug('-> Storing image as temporary file: ' . $filename);
-		$image->save($filename, $mime_type);
+		$filename = $regs[1];
+
+		$tmpfile = $this->tempdir . 'wpro' . time() . rand(0, 999999);
+		while (file_exists($tmpfile)) $tmpfile = $this->tempdir . 'wpro' . time() . rand(0, 999999);
+		$this->debug('-> Storing image as temporary file: ' . $tmpfile);
+
+		switch ($mime_type) {
+			case 'image/jpeg':
+				imagejpeg($image, $tmpfile, apply_filters('jpeg_quality', 90, 'edit_image'));
+				break;
+			case 'image/png':
+				imagepng($image, $tmpfile);
+				break;
+			case 'image/gif':
+				imagegif($image, $tmpfile);
+				break;
+			default:
+				return false;
+		}
 
 		$upload = wp_upload_dir();
 		$url = $upload['baseurl'];
 		if (substr($url, -1) != '/') $url .= '/';
-		while (substr($tmpfile, 0, 1) == '/') $tmpfile = substr($tmpfile, 1);
-		$url .= $tmpfile;
+		while (substr($filename, 0, 1) == '/') $filename = substr($filename, 1);
+		$url .= $filename;
 
-		return $this->backend->upload($filename, $this->url_normalizer($url), $mime_type);
+		return $this->backend->upload($tmpfile, $this->url_normalizer($url), $mime_type);
 	}
 
 	function upload_bits($data) {
