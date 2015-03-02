@@ -600,6 +600,7 @@ class WordpressReadOnly extends WordpressReadOnlyGeneric {
 		$this->debug('WordpressReadOnly::load_image_to_edit_path("' . $filepath . '");');
 
 		if (substr($filepath, 0, 2) == '//') {
+
 			$ending = '';
 			if (preg_match('/\.([^\.\/]+)$/', $filepath, $regs)) $ending = '.' . $regs[1];
 
@@ -612,8 +613,7 @@ class WordpressReadOnly extends WordpressReadOnlyGeneric {
 			$this->debug('-> Storing file at: ' . $tmpfile);
 
 			$ch = curl_init();
-                        $filepath_with_proto = 'http:' . $filepath;
-			curl_setopt($ch, CURLOPT_URL, $filepath_with_proto);
+			curl_setopt($ch, CURLOPT_URL, $filepath);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($ch, CURLOPT_AUTOREFERER, true);
 
