@@ -27,7 +27,8 @@ class WPRO_Url {
 	function relativePath($url) {
 		$file = explode('/', $url);
 		$parts = count($file);
-		$file = $file[$parts - 3] . '/' . $file[$parts - 2] . '/' . $file[$parts - 1];
+		// $file = $file[$parts - 3] . '/' . $file[$parts - 2] . '/' . $file[$parts - 1];
+		$file = $file[$parts - 2] . '/' . $file[$parts - 1];
 		return $file;
 	}
 
